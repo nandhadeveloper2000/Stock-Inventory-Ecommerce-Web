@@ -11,6 +11,7 @@ import { computeProfileProgress, shopOwnersService } from "@/services/shopOwners
 import { shopsService } from "@/services/shops.service";
 import { formatDate } from "@/lib/utils";
 import { extractErrorMessage } from "@/lib/axios";
+import { routes } from "@/lib/routes";
 import type { ShopOwner } from "@/types/shop.types";
 
 export default function ShopOwnersPage() {
@@ -139,12 +140,12 @@ export default function ShopOwnersPage() {
       customActions={(row) => (
         <>
           <Button asChild size="icon" variant="ghost" className="h-8 w-8" aria-label="View">
-            <Link href={`/super-admin/shop-owners/${row.id}`}>
+            <Link href={routes.superAdmin.shopOwnerDetails(row.id)}>
               <Eye className="h-4 w-4" />
             </Link>
           </Button>
           <Button asChild size="icon" variant="ghost" className="h-8 w-8" aria-label="Edit">
-            <Link href={`/super-admin/shop-owners/${row.id}/edit`}>
+            <Link href={routes.superAdmin.shopOwnerEdit(row.id)}>
               <Pencil className="h-4 w-4" />
             </Link>
           </Button>

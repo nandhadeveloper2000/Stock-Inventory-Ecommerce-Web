@@ -1,6 +1,7 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -9,10 +10,14 @@ import { OrderTimeline } from "@/components/ecommerce/OrderTimeline";
 import { ordersService } from "@/services/orders.service";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
-export default function CustomerOrderDetailsPage() {
-  const params = useParams<{ id: string }>();
-  const id = Number(params.id);
-  const { data } = useQuery({ queryKey: ["order", id], queryFn: () => ordersService.get(id) });
+function CustomerOrderDetailsInner() {
+  const sp = useSearchParams();
+  const id = Number(sp.get("id"));
+  const { data } = useQuery({
+    queryKey: ["order", id],
+    queryFn: () => ordersService.get(id),
+    enabled: Number.isFinite(id) && id > 0,
+  });
 
   if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
@@ -53,5 +58,13 @@ export default function CustomerOrderDetailsPage() {
         </Card>
       </div>
     </>
+  );
+}
+
+export default function CustomerOrderDetailsPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <CustomerOrderDetailsInner />
+    </Suspense>
   );
 }

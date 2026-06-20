@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,10 @@ import { ShopOwnerForm } from "@/components/shop-owners/ShopOwnerForm";
 import { shopOwnersService } from "@/services/shopOwners.service";
 import { shopsService } from "@/services/shops.service";
 
-export default function EditShopOwnerPage() {
-  const params = useParams<{ id: string }>();
+function EditShopOwnerInner() {
+  const sp = useSearchParams();
   const router = useRouter();
-  const ownerId = params.id;
+  const ownerId = sp.get("id") ?? "";
 
   const { data: owner, isLoading: ownerLoading } = useQuery({
     queryKey: ["shop-owners", ownerId],
@@ -57,5 +57,19 @@ export default function EditShopOwnerPage() {
       initialOwner={owner}
       initialShops={ownerShops}
     />
+  );
+}
+
+export default function EditShopOwnerPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <EditShopOwnerInner />
+    </Suspense>
   );
 }

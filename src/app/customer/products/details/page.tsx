@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Heart, ShoppingCart, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,33 +17,34 @@ import { productsService } from "@/services/products.service";
 import { reviewsService } from "@/services/reviews.service";
 import { useCartStore } from "@/store/cart.store";
 
-export default function ProductDetailsPage() {
-  const params = useParams<{ id: string }>();
-  const id = Number(params.id);
+function ProductDetailsInner() {
+  const sp = useSearchParams();
+  const id = Number(sp.get("id"));
+  const enabled = Number.isFinite(id) && id > 0;
   const [qty, setQty] = useState(1);
   const addItem = useCartStore((s) => s.addItem);
 
-  const product = useQuery({ queryKey: ["product", id], queryFn: () => productsService.get(id) });
+  const product = useQuery({ queryKey: ["product", id], queryFn: () => productsService.get(id), enabled });
   const shopProducts = useQuery({ queryKey: ["shop-products"], queryFn: () => shopProductsService.list() });
-  const reviews = useQuery({ queryKey: ["reviews", id], queryFn: () => reviewsService.list(id) });
+  const reviews = useQuery({ queryKey: ["reviews", id], queryFn: () => reviewsService.list(id), enabled });
 
-  const sp = (shopProducts.data ?? []).find((s) => s.productId === id);
-  const inStock = sp ? sp.qty > 0 : true;
+  const sp2 = (shopProducts.data ?? []).find((s) => s.productId === id);
+  const inStock = sp2 ? sp2.qty > 0 : true;
 
   if (!product.data) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
   const handleAdd = () => {
-    if (!sp) return toast.error("Not available");
+    if (!sp2) return toast.error("Not available");
     addItem({
-      id: sp.id,
+      id: sp2.id,
       productId: id,
       itemName: product.data.itemName,
       sku: product.data.sku,
       imageUrl: product.data.images?.[0],
-      price: sp.sellingPrice,
-      mrp: sp.mrpPrice,
+      price: sp2.sellingPrice,
+      mrp: sp2.mrpPrice,
       qty,
-      shopId: sp.shopId,
+      shopId: sp2.shopId,
     });
     toast.success("Added to cart");
   };
@@ -75,13 +76,13 @@ export default function ProductDetailsPage() {
             <p className="text-xs text-muted-foreground mt-1">SKU: {product.data.sku}</p>
           </div>
 
-          <PriceDisplay price={sp?.sellingPrice ?? 0} mrp={sp?.mrpPrice} size="lg" />
+          <PriceDisplay price={sp2?.sellingPrice ?? 0} mrp={sp2?.mrpPrice} size="lg" />
 
           <Badge variant={inStock ? "success" : "destructive"}>{inStock ? "In Stock" : "Out of Stock"}</Badge>
 
           <div className="flex items-center gap-3">
             <span className="text-sm">Quantity:</span>
-            <QuantityInput value={qty} onChange={setQty} max={sp?.qty ?? 999} />
+            <QuantityInput value={qty} onChange={setQty} max={sp2?.qty ?? 999} />
           </div>
 
           <div className="flex gap-2 pt-1">
@@ -129,5 +130,13 @@ export default function ProductDetailsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function ProductDetailsPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <ProductDetailsInner />
+    </Suspense>
   );
 }

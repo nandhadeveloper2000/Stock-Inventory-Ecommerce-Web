@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import { computeProfileProgress, shopOwnersService } from "@/services/shopOwners
 import { shopsService } from "@/services/shops.service";
 import { extractErrorMessage } from "@/lib/axios";
 import { formatDate } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 import type { Shop } from "@/types/shop.types";
 import { BusinessLocationInlineForm } from "@/components/shop-owners/BusinessLocationInlineForm";
 
@@ -34,11 +35,11 @@ const SHOP_CONTROL_LABEL: Record<string, string> = {
   INVENTORY_AND_ECOMMERCE: "Inventory + Ecommerce Only",
 };
 
-export default function ShopOwnerDetailPage() {
-  const params = useParams<{ id: string }>();
+function ShopOwnerDetailInner() {
+  const sp = useSearchParams();
   const router = useRouter();
   const qc = useQueryClient();
-  const ownerId = params.id;
+  const ownerId = sp.get("id") ?? "";
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [editingShop, setEditingShop] = useState<Shop | null>(null);
 
@@ -118,7 +119,7 @@ export default function ShopOwnerDetailPage() {
         </div>
         <div className="flex gap-2">
           <Button asChild>
-            <Link href={`/super-admin/shop-owners/${ownerId}/edit`}>
+            <Link href={routes.superAdmin.shopOwnerEdit(ownerId)}>
               <Pencil className="mr-2 h-4 w-4" /> Edit
             </Link>
           </Button>
@@ -345,6 +346,20 @@ export default function ShopOwnerDetailPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ShopOwnerDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <ShopOwnerDetailInner />
+    </Suspense>
   );
 }
 
