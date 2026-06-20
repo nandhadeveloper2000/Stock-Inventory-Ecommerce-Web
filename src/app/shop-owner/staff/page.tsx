@@ -87,7 +87,7 @@ export default function StaffPage() {
                 name: "shopId",
                 label: "Assigned Shop",
                 type: "select",
-                options: shops.map((s) => ({ label: s.shopName, value: String(s.id) })),
+                options: shops.map((s) => ({ label: s.shopName ?? "", value: String(s.id) })),
               },
               {
                 name: "password",

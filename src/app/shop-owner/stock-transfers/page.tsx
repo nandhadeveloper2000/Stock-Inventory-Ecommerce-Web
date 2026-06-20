@@ -50,8 +50,8 @@ export default function StockTransfersPage() {
             notes: record?.notes ?? "",
           }}
           fields={[
-            { name: "fromShopId", label: "From Shop", type: "select", options: shops.map((s) => ({ label: s.shopName, value: s.id as number })) },
-            { name: "toShopId", label: "To Shop", type: "select", options: shops.map((s) => ({ label: s.shopName, value: s.id as number })) },
+            { name: "fromShopId", label: "From Shop", type: "select", options: shops.map((s) => ({ label: s.shopName ?? "", value: s.id as number })) },
+            { name: "toShopId", label: "To Shop", type: "select", options: shops.map((s) => ({ label: s.shopName ?? "", value: s.id as number })) },
             {
               name: "transferType",
               label: "Type",

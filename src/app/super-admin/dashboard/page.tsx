@@ -66,7 +66,7 @@ export default function SuperAdminDashboardPage() {
                   <div>
                     <p className="text-sm font-medium">{s.shopName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {s.shopCode} · {s.businessType.replace(/_/g, " ")}
+                      {s.shopCode} · {(s.businessType ?? "").replace(/_/g, " ")}
                     </p>
                   </div>
                   <StatusBadge status={s.isActive} />

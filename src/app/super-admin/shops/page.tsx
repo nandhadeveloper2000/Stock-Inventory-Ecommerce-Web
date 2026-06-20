@@ -49,7 +49,7 @@ export default function ShopsPage() {
         { key: "shopCode", header: "Code" },
         { key: "shopOwnerName", header: "Owner" },
         { key: "shopType", header: "Type" },
-        { key: "businessType", header: "Business", render: (r) => r.businessType.replace(/_/g, "/") },
+        { key: "businessType", header: "Business", render: (r) => (r.businessType ?? "").replace(/_/g, "/") },
         { key: "billingType", header: "Billing" },
         { key: "state", header: "State" },
       ]}
@@ -124,7 +124,7 @@ export default function ShopsPage() {
           <InfoRow label="Code" value={r.shopCode} />
           <InfoRow label="Owner" value={r.shopOwnerName} />
           <InfoRow label="Type" value={r.shopType} />
-          <InfoRow label="Business" value={r.businessType.replace(/_/g, " / ")} />
+          <InfoRow label="Business" value={(r.businessType ?? "").replace(/_/g, " / ")} />
           <InfoRow label="Billing" value={r.billingType} />
           <InfoRow label="Contact" value={r.contactMobile} />
           <InfoRow label="Address" value={`${r.area ?? ""}, ${r.district ?? ""}, ${r.state ?? ""}`} />

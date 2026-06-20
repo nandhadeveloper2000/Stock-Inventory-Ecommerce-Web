@@ -26,7 +26,7 @@ export default function ShopOwnerReportsPage() {
     <ReportsPage
       title="Reports"
       description="Low stock, stock value, sales, purchases, expenses and customer orders"
-      shops={(shops.data ?? []).map((s) => ({ label: s.shopName, value: String(s.id) }))}
+      shops={(shops.data ?? []).map((s) => ({ label: s.shopName ?? "", value: String(s.id) }))}
       statuses={[
         { label: "All", value: "" },
         { label: "Paid", value: "PAID" },
