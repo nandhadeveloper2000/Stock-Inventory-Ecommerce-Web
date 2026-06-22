@@ -38,7 +38,7 @@ steps:
         npm install
       fi
 
-  - name: Build static Next.js website
+  - name: Verify production API URL
     env:
       NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
     run: |
@@ -49,7 +49,12 @@ steps:
         exit 1
       fi
 
-      npm run build
+      echo "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL"
+
+  - name: Build static Next.js website
+    env:
+      NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+    run: npm run build
 
   - name: Verify static build output
     run: |
