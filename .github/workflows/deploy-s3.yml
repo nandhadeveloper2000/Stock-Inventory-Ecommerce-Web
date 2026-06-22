@@ -37,10 +37,18 @@ jobs:
             npm install
           fi
 
-      - name: Build static Next.js website
-        env:
-          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
-        run: npm run build
+- name: Build static Next.js website
+  env:
+    NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+  run: |
+    echo "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL"
+
+    if [ -z "$NEXT_PUBLIC_API_BASE_URL" ]; then
+      echo "ERROR: NEXT_PUBLIC_API_BASE_URL GitHub variable is empty."
+      exit 1
+    fi
+
+    npm run build
 
       - name: Verify static build output
         run: test -d out
