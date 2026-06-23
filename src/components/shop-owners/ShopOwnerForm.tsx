@@ -130,7 +130,7 @@ const emptyLocation: BusinessLocation = {
   pincode: "",
   latitude: "",
   longitude: "",
-  deliveryAvailable: true,
+  deliveryAvailable: false,
   workingDays: "Monday – Saturday",
   openingTime: "",
   closingTime: "",
@@ -341,6 +341,25 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
         toast.error(msg);
       },
       { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // OpenStreetMap has poor coverage of small businesses. Let the user look the
+  // shop up on Google Maps (works over HTTP), then read off / paste coordinates.
+  const openGoogleMaps = () => {
+    const q =
+      draftLocation.shopName.trim() ||
+      [draftLocation.area, draftLocation.district, draftLocation.state]
+        .filter(Boolean)
+        .join(" ");
+    if (!q) {
+      toast.error("Enter a shop name or address first");
+      return;
+    }
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`,
+      "_blank",
+      "noopener,noreferrer"
     );
   };
 
@@ -1081,9 +1100,12 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
                 <span className="font-medium"> Get Current Location</span> to auto-fill
                 from your device.
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={clearAddress}>
                   <X className="mr-1.5 h-3.5 w-3.5" /> Clear Address
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={openGoogleMaps}>
+                  <MapPin className="mr-1.5 h-3.5 w-3.5" /> Find on Google Maps
                 </Button>
                 <Button
                   type="button"
@@ -1295,12 +1317,14 @@ function ShopNameOsmSearch({
   const [results, setResults] = useState<OsmPlace[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
   useEffect(() => {
     const q = value.trim();
     if (q.length < 3) {
       setResults([]);
       setLoading(false);
+      setSearched(false);
       return;
     }
     const ctrl = new AbortController();
@@ -1309,10 +1333,14 @@ function ShopNameOsmSearch({
       searchOsm(q, ctrl.signal)
         .then((places) => {
           setResults(places);
+          setSearched(true);
           setOpen(true);
         })
         .catch((e) => {
-          if (!(e instanceof DOMException && e.name === "AbortError")) setResults([]);
+          if (!(e instanceof DOMException && e.name === "AbortError")) {
+            setResults([]);
+            setSearched(true);
+          }
         })
         .finally(() => setLoading(false));
     }, 500);
@@ -1355,6 +1383,14 @@ function ShopNameOsmSearch({
             </li>
           ))}
         </ul>
+      )}
+      {open && !loading && searched && results.length === 0 && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover px-3 py-2 text-xs text-muted-foreground shadow-md">
+          No OpenStreetMap match. OSM doesn’t index most small businesses — try a
+          street/area (e.g. “Imperial Road Cuddalore”), or use{" "}
+          <span className="font-medium text-foreground">Find on Google Maps</span> to
+          read the coordinates.
+        </div>
       )}
     </div>
   );
