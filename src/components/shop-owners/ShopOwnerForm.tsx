@@ -9,6 +9,7 @@ import {
   Building2,
   ImagePlus,
   Loader2,
+  LocateFixed,
   MapPin,
   Plus,
   Trash2,
@@ -33,6 +34,7 @@ import { shopOwnersService } from "@/services/shopOwners.service";
 import { shopsService } from "@/services/shops.service";
 import { INDIAN_STATES } from "@/lib/constants";
 import { uploadToCloudinary, type CloudinaryResource } from "@/lib/cloudinary";
+import { searchOsm, reverseOsm, type OsmAddressFill, type OsmPlace } from "@/lib/osm";
 import { extractErrorMessage } from "@/lib/axios";
 import type {
   BillingType,
@@ -64,6 +66,22 @@ const BILLING_TYPE_OPTIONS: { value: BillingType; label: string }[] = [
   { value: "BOTH", label: "Both" },
 ];
 
+const WORKING_DAYS_OPTIONS = [
+  "Monday – Saturday",
+  "Monday – Friday",
+  "Monday – Sunday",
+  "All Days",
+  "Weekends Only",
+];
+
+/** Parse a free-text lat/lng string into a number, or undefined if invalid. */
+function toCoord(v: string): number | undefined {
+  const t = v.trim();
+  if (!t) return undefined;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 interface BusinessLocation {
   /** Set when editing an existing shop; absent for newly-added drafts. */
   __originalId?: string;
@@ -80,8 +98,17 @@ interface BusinessLocation {
   taluk: string;
   area: string;
   street: string;
+  addressLine: string;
   pincode: string;
+  /** Stored as strings while editing; parsed to numbers on save. */
+  latitude: string;
+  longitude: string;
+  deliveryAvailable: boolean;
+  workingDays: string;
+  openingTime: string;
+  closingTime: string;
   frontImageUrl: string;
+  bannerImageUrl: string;
   gstCertificateUrl: string;
   udyamCertificateUrl: string;
   isActive?: boolean;
@@ -99,8 +126,16 @@ const emptyLocation: BusinessLocation = {
   taluk: "",
   area: "",
   street: "",
+  addressLine: "",
   pincode: "",
+  latitude: "",
+  longitude: "",
+  deliveryAvailable: true,
+  workingDays: "Monday – Saturday",
+  openingTime: "",
+  closingTime: "",
   frontImageUrl: "",
+  bannerImageUrl: "",
   gstCertificateUrl: "",
   udyamCertificateUrl: "",
 };
@@ -145,8 +180,16 @@ function shopToLocation(shop: Shop): BusinessLocation {
     taluk: shop.address?.taluk ?? shop.taluk ?? "",
     area: shop.address?.area ?? shop.area ?? "",
     street: shop.address?.street ?? shop.settings?.street ?? "",
+    addressLine: shop.address?.addressLine ?? "",
     pincode: shop.address?.pincode ?? shop.pincode ?? "",
-    frontImageUrl: shop.settings?.documents?.frontImageUrl ?? "",
+    latitude: shop.latitude != null ? String(shop.latitude) : "",
+    longitude: shop.longitude != null ? String(shop.longitude) : "",
+    deliveryAvailable: shop.deliveryAvailable ?? false,
+    workingDays: shop.workingDays ?? "",
+    openingTime: shop.openingTime ?? "",
+    closingTime: shop.closingTime ?? "",
+    frontImageUrl: shop.frontImageUrl ?? shop.settings?.documents?.frontImageUrl ?? "",
+    bannerImageUrl: shop.bannerImageUrl ?? "",
     gstCertificateUrl: shop.settings?.documents?.gstCertificateUrl ?? "",
     udyamCertificateUrl: shop.settings?.documents?.udyamCertificateUrl ?? "",
     isActive: shop.isActive,
@@ -163,6 +206,7 @@ export interface ShopOwnerFormProps {
 export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: ShopOwnerFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const [basic, setBasic] = useState<OwnerBasic>(() => ({
     shopControl: initialOwner?.shopControl ?? "INVENTORY_ONLY",
@@ -230,6 +274,62 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
     setAddress((prev) => ({ ...prev, [k]: v }));
   const updateDraft = <K extends keyof BusinessLocation>(k: K, v: BusinessLocation[K]) =>
     setDraftLocation((prev) => ({ ...prev, [k]: v }));
+
+  // Merge an OpenStreetMap result (search pick or reverse geocode) into the
+  // draft, only overwriting fields the result actually resolved.
+  const applyOsmFill = (fill: OsmAddressFill) =>
+    setDraftLocation((d) => ({
+      ...d,
+      street: fill.street ?? d.street,
+      area: fill.area ?? d.area,
+      taluk: fill.taluk ?? d.taluk,
+      district: fill.district ?? d.district,
+      state: fill.state ?? d.state,
+      pincode: fill.pincode ?? d.pincode,
+      latitude: fill.latitude ?? d.latitude,
+      longitude: fill.longitude ?? d.longitude,
+    }));
+
+  const clearAddress = () =>
+    setDraftLocation((d) => ({
+      ...d,
+      state: "",
+      district: "",
+      taluk: "",
+      area: "",
+      street: "",
+      addressLine: "",
+      pincode: "",
+      latitude: "",
+      longitude: "",
+    }));
+
+  const getCurrentLocation = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("Geolocation is not supported by this browser");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const fill = await reverseOsm(latitude, longitude);
+          applyOsmFill({ ...fill, latitude: String(latitude), longitude: String(longitude) });
+          toast.success("Location detected");
+        } catch (e) {
+          toast.error(extractErrorMessage(e, "Could not resolve address from location"));
+        } finally {
+          setLocating(false);
+        }
+      },
+      (err) => {
+        setLocating(false);
+        toast.error(err.message || "Could not get current location");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   // BRANCH parent candidates: any MAIN shop in the saved list (use its backend
   // ID) or any MAIN currently drafted in the local list (use a "local:<idx>"
@@ -405,8 +505,16 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
         taluk: loc.taluk || undefined,
         area: loc.area || undefined,
         street: loc.street || undefined,
+        addressLine: loc.addressLine || undefined,
         pincode: loc.pincode || undefined,
+        latitude: toCoord(loc.latitude),
+        longitude: toCoord(loc.longitude),
+        deliveryAvailable: loc.deliveryAvailable,
+        workingDays: loc.workingDays || undefined,
+        openingTime: loc.openingTime || undefined,
+        closingTime: loc.closingTime || undefined,
         frontImageUrl: loc.frontImageUrl || undefined,
+        bannerImageUrl: loc.bannerImageUrl || undefined,
         gstCertificateUrl: loc.gstCertificateUrl || undefined,
         udyamCertificateUrl: loc.udyamCertificateUrl || undefined,
       });
@@ -723,11 +831,15 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <FieldLabel label="Shop / Location Name" required>
-                <Input
+                <ShopNameOsmSearch
                   value={draftLocation.shopName}
-                  onChange={(e) => updateDraft("shopName", e.target.value)}
-                  placeholder="Shop / Location Name"
+                  onValueChange={(v) => updateDraft("shopName", v)}
+                  onPick={applyOsmFill}
                 />
+                <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
+                  Type 3+ characters to search OpenStreetMap. Picking a result
+                  auto-fills street/area/district/state/pincode + lat/lng.
+                </p>
               </FieldLabel>
               <FieldLabel label="Shop Type" required>
                 <Select
@@ -880,14 +992,111 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
                   maxLength={6}
                 />
               </FieldLabel>
+              <FieldLabel label="Address Line">
+                <Input
+                  value={draftLocation.addressLine}
+                  onChange={(e) => updateDraft("addressLine", e.target.value)}
+                  placeholder="Building / landmark"
+                />
+              </FieldLabel>
+              <FieldLabel label="Latitude">
+                <Input
+                  value={draftLocation.latitude}
+                  onChange={(e) => updateDraft("latitude", e.target.value)}
+                  placeholder="e.g. 13.0776"
+                  inputMode="decimal"
+                />
+              </FieldLabel>
+              <FieldLabel label="Longitude">
+                <Input
+                  value={draftLocation.longitude}
+                  onChange={(e) => updateDraft("longitude", e.target.value)}
+                  placeholder="e.g. 80.2917"
+                  inputMode="decimal"
+                />
+              </FieldLabel>
+              <FieldLabel label="Delivery" required>
+                <Select
+                  value={draftLocation.deliveryAvailable ? "true" : "false"}
+                  onValueChange={(v) => updateDraft("deliveryAvailable", v === "true")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Available</SelectItem>
+                    <SelectItem value="false">Not Available</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FieldLabel>
+              <FieldLabel label="Working Days">
+                <Select
+                  value={draftLocation.workingDays || undefined}
+                  onValueChange={(v) => updateDraft("workingDays", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select working days" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORKING_DAYS_OPTIONS.map((o) => (
+                      <SelectItem key={o} value={o}>
+                        {o}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldLabel>
+              <FieldLabel label="Opening Time">
+                <Input
+                  value={draftLocation.openingTime}
+                  onChange={(e) => updateDraft("openingTime", e.target.value)}
+                  placeholder="08:00 AM"
+                />
+              </FieldLabel>
+              <FieldLabel label="Closing Time">
+                <Input
+                  value={draftLocation.closingTime}
+                  onChange={(e) => updateDraft("closingTime", e.target.value)}
+                  placeholder="07:00 PM"
+                />
+              </FieldLabel>
             </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] leading-tight text-muted-foreground">
+                Latitude / Longitude help customers locate this shop. Use
+                <span className="font-medium"> Get Current Location</span> to auto-fill
+                from your device.
+              </p>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={clearAddress}>
+                  <X className="mr-1.5 h-3.5 w-3.5" /> Clear Address
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={getCurrentLocation}
+                  disabled={locating}
+                >
+                  {locating ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <LocateFixed className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Get Current Location
+                </Button>
+              </div>
+            </div>
+
+            <LiveLocationMap lat={draftLocation.latitude} lon={draftLocation.longitude} />
 
             <div className="mt-6 rounded-lg border p-4">
               <h4 className="mb-1 text-sm font-semibold">Location Proof Documents</h4>
               <p className="mb-4 text-xs text-muted-foreground">
                 Add the shop front image and business proof documents for this location.
               </p>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <FilePickerBox
                   label="Front Image"
                   hint="Shop front photo"
@@ -897,6 +1106,16 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
                   value={draftLocation.frontImageUrl}
                   onChange={(url) => updateDraft("frontImageUrl", url)}
                   cta="Upload Front Image"
+                />
+                <FilePickerBox
+                  label="Shop Banner / Visiting Card"
+                  hint="Banner board or visiting card"
+                  accept="image/*"
+                  resource="image"
+                  folder="shops/banners"
+                  value={draftLocation.bannerImageUrl}
+                  onChange={(url) => updateDraft("bannerImageUrl", url)}
+                  cta="Upload Banner"
                 />
                 <FilePickerBox
                   label="GST Certificate"
@@ -989,6 +1208,142 @@ function StateSelect({ value, onChange }: { value: string; onChange: (v: string)
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+/**
+ * Live OpenStreetMap preview that re-centers on the current lat/lng. The embed
+ * URL is keyed off the coordinates, so it updates the moment they change
+ * (typing, an OSM pick, or "Get Current Location"). No API key required.
+ */
+function LiveLocationMap({ lat, lon }: { lat: string; lon: string }) {
+  const la = Number(lat);
+  const lo = Number(lon);
+  const hasCoords =
+    lat.trim() !== "" && lon.trim() !== "" && Number.isFinite(la) && Number.isFinite(lo);
+
+  if (!hasCoords) {
+    return (
+      <div className="mt-3 flex h-48 items-center justify-center rounded-md border border-dashed bg-muted/30 text-center text-xs text-muted-foreground">
+        <span className="px-4">
+          Enter a latitude &amp; longitude, pick an OpenStreetMap result, or use
+          “Get Current Location” to preview the shop on a live map.
+        </span>
+      </div>
+    );
+  }
+
+  const d = 0.008;
+  const bbox = `${lo - d},${la - d},${lo + d},${la + d}`;
+  const embedSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${la},${lo}`;
+  const fullMap = `https://www.openstreetmap.org/?mlat=${la}&mlon=${lo}#map=17/${la}/${lo}`;
+
+  return (
+    <div className="mt-3 space-y-1">
+      <iframe
+        // key forces a fresh load when coords change so the marker re-centers
+        key={`${la},${lo}`}
+        title="Shop location preview"
+        src={embedSrc}
+        className="h-48 w-full rounded-md border"
+        loading="lazy"
+      />
+      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+        <span>
+          📍 {la.toFixed(5)}, {lo.toFixed(5)}
+        </span>
+        <a
+          href={fullMap}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline"
+        >
+          View larger map
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Shop-name input doubling as an OpenStreetMap (Nominatim) search box. Typing 3+
+ * characters debounces a forward-geocode; picking a suggestion calls onPick with
+ * the resolved address + coordinates.
+ */
+function ShopNameOsmSearch({
+  value,
+  onValueChange,
+  onPick,
+}: {
+  value: string;
+  onValueChange: (v: string) => void;
+  onPick: (fill: OsmAddressFill) => void;
+}) {
+  const [results, setResults] = useState<OsmPlace[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const q = value.trim();
+    if (q.length < 3) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+    const ctrl = new AbortController();
+    setLoading(true);
+    const t = setTimeout(() => {
+      searchOsm(q, ctrl.signal)
+        .then((places) => {
+          setResults(places);
+          setOpen(true);
+        })
+        .catch((e) => {
+          if (!(e instanceof DOMException && e.name === "AbortError")) setResults([]);
+        })
+        .finally(() => setLoading(false));
+    }, 500);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [value]);
+
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        onChange={(e) => onValueChange(e.target.value)}
+        onFocus={() => results.length > 0 && setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Type shop name or address (e.g. Globo Green Cuddalore)"
+        autoComplete="off"
+      />
+      {loading && (
+        <Loader2 className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+      )}
+      {open && results.length > 0 && (
+        <ul className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover py-1 text-sm shadow-md">
+          {results.map((r, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-muted"
+                onMouseDown={(e) => {
+                  // mousedown (not click) so it fires before the input blur closes the list
+                  e.preventDefault();
+                  onPick(r.fill);
+                  setOpen(false);
+                }}
+              >
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="line-clamp-2">{r.displayName}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

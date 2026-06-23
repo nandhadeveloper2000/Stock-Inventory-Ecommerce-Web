@@ -35,6 +35,14 @@ interface BackendShopResponse {
   email?: string;
   website?: string;
   logoUrl?: string;
+  frontImageUrl?: string;
+  bannerImageUrl?: string;
+  latitude?: number;
+  longitude?: number;
+  deliveryAvailable?: boolean;
+  workingDays?: string;
+  openingTime?: string;
+  closingTime?: string;
   address?: Record<string, unknown>;
   bankDetails?: Record<string, unknown>;
   settings?: Record<string, unknown>;
@@ -58,6 +66,7 @@ function mapShop(shop: BackendShopResponse): Shop {
     taluk: s(addr.taluk),
     area: s(addr.area),
     street: s(addr.street) ?? s(settings.street),
+    addressLine: s(addr.addressLine),
     pincode: s(addr.pincode),
   };
   const shopSettings: ShopSettings = {
@@ -83,6 +92,15 @@ function mapShop(shop: BackendShopResponse): Shop {
     email: shop.email,
     website: shop.website,
     logoUrl: shop.logoUrl,
+    // Prefer the dedicated columns, falling back to legacy settings.documents.
+    frontImageUrl: s(shop.frontImageUrl) ?? s(docsRaw.frontImageUrl),
+    bannerImageUrl: s(shop.bannerImageUrl),
+    latitude: typeof shop.latitude === "number" ? shop.latitude : undefined,
+    longitude: typeof shop.longitude === "number" ? shop.longitude : undefined,
+    deliveryAvailable: shop.deliveryAvailable,
+    workingDays: s(shop.workingDays),
+    openingTime: s(shop.openingTime),
+    closingTime: s(shop.closingTime),
     address,
     settings: shopSettings,
     // flat convenience fields
@@ -107,9 +125,11 @@ interface ShopWritePayload extends Partial<Shop> {
   // Inputs that aren't on the Shop type but are common form fields.
   gstNumber?: string;
   frontImageUrl?: string;
+  bannerImageUrl?: string;
   gstCertificateUrl?: string;
   udyamCertificateUrl?: string;
   street?: string;
+  addressLine?: string;
   parentShopId?: string;
 }
 
@@ -126,12 +146,21 @@ function toBackendPayload(payload: ShopWritePayload) {
     parentShopId: blank(payload.parentShopId),
     gstin: blank(payload.gstNumber ?? payload.gstin),
     mobile: blank(payload.contactMobile ?? payload.mobile),
+    frontImageUrl: blank(payload.frontImageUrl),
+    bannerImageUrl: blank(payload.bannerImageUrl),
+    latitude: typeof payload.latitude === "number" ? payload.latitude : undefined,
+    longitude: typeof payload.longitude === "number" ? payload.longitude : undefined,
+    deliveryAvailable: payload.deliveryAvailable,
+    workingDays: blank(payload.workingDays),
+    openingTime: blank(payload.openingTime),
+    closingTime: blank(payload.closingTime),
     address: {
       state: blank(payload.state),
       district: blank(payload.district),
       taluk: blank(payload.taluk),
       area: blank(payload.area),
       street: blank(payload.street),
+      addressLine: blank(payload.addressLine),
       pincode: blank(payload.pincode),
     },
     settings: {

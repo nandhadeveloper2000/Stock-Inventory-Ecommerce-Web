@@ -58,6 +58,7 @@ export interface ShopAddress {
   taluk?: string;
   area?: string;
   street?: string;
+  addressLine?: string;
   pincode?: string;
 }
 
@@ -93,6 +94,14 @@ export interface Shop {
   email?: string;
   website?: string;
   logoUrl?: string;
+  frontImageUrl?: string;
+  bannerImageUrl?: string;
+  latitude?: number;
+  longitude?: number;
+  deliveryAvailable?: boolean;
+  workingDays?: string;
+  openingTime?: string;
+  closingTime?: string;
   address?: ShopAddress;
   settings?: ShopSettings;
   // convenience / legacy flat fields (filled by the service mapper)
