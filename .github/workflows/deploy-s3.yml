@@ -27,6 +27,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
         run: |
@@ -36,13 +37,28 @@ jobs:
             npm install
           fi
 
+      - name: Verify production API URL
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+        run: |
+          echo "Checking API base URL..."
+
+          if [ -z "$NEXT_PUBLIC_API_BASE_URL" ]; then
+            echo "ERROR: NEXT_PUBLIC_API_BASE_URL GitHub variable is empty."
+            exit 1
+          fi
+
+          echo "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL"
+
       - name: Build static Next.js website
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
         run: npm run build
 
       - name: Verify static build output
-        run: test -d out
+        run: |
+          test -d out
+          test -f out/index.html
 
       - name: Configure AWS credentials through OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -53,3 +69,7 @@ jobs:
       - name: Upload website to Amazon S3
         run: |
           aws s3 sync ./out s3://${{ vars.S3_BUCKET }} --delete
+
+      - name: Deployment completed
+        run: |
+          echo "Website deployed successfully to S3 bucket: ${{ vars.S3_BUCKET }}"
