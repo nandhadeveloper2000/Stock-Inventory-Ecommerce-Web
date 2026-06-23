@@ -49,7 +49,7 @@ export default function ShopOwnersPage() {
     <CrudManagementPage<ShopOwner>
       title="Shop Owners"
       description="Onboard and manage shop owners. New owners are Inactive until their email is verified."
-      addHref="/super-admin/shop-owners/new"
+      addHref="/master/shop-owners/new"
       rows={data}
       searchKeys={["name", "username", "email", "mobile"]}
       showStatus={false}
@@ -139,12 +139,12 @@ export default function ShopOwnersPage() {
       customActions={(row) => (
         <>
           <Button asChild size="icon" variant="ghost" className="h-8 w-8" aria-label="View">
-            <Link href={`/super-admin/shop-owners/${row.id}`}>
+            <Link href={`/master/shop-owners/${row.id}`}>
               <Eye className="h-4 w-4" />
             </Link>
           </Button>
           <Button asChild size="icon" variant="ghost" className="h-8 w-8" aria-label="Edit">
-            <Link href={`/super-admin/shop-owners/${row.id}/edit`}>
+            <Link href={`/master/shop-owners/${row.id}/edit`}>
               <Pencil className="h-4 w-4" />
             </Link>
           </Button>

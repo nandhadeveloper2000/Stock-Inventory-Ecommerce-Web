@@ -8,7 +8,7 @@ import { MobileSidebar } from "./MobileSidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import type { NavItem } from "./nav-items";
 import { useAuthStore } from "@/store/auth.store";
-import { getRoleHome, UserRoleType } from "@/lib/roles";
+import { UserRoleType } from "@/lib/roles";
 import { getLoginPortalFor } from "@/lib/portals";
 
 interface Props {
@@ -30,7 +30,7 @@ export function RoleLayout({ nav, allowedRoles, title, children }: Props) {
       return;
     }
     if (user && !allowedRoles.includes(user.role as UserRoleType)) {
-      router.replace(getRoleHome(user.role));
+      router.replace("/unauthorized");
       return;
     }
     setReady(true);

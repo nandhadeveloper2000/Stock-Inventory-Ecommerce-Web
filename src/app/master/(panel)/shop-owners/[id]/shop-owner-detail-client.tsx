@@ -76,7 +76,7 @@ export default function ShopOwnerDetailPage() {
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">Shop owner not found.</p>
-        <Button variant="outline" onClick={() => router.push("/super-admin/shop-owners")}>
+        <Button variant="outline" onClick={() => router.push("/master/shop-owners")}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Shop Owners
         </Button>
       </div>
@@ -118,12 +118,12 @@ export default function ShopOwnerDetailPage() {
         </div>
         <div className="flex gap-2">
           <Button asChild>
-            <Link href={`/super-admin/shop-owners/${ownerId}/edit`}>
+            <Link href={`/master/shop-owners/${ownerId}/edit`}>
               <Pencil className="mr-2 h-4 w-4" /> Edit
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/super-admin/shop-owners">
+            <Link href="/master/shop-owners">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Shop Owners
             </Link>
           </Button>

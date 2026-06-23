@@ -69,9 +69,9 @@ export function getRoleHome(role: UserRoleType | string | undefined): string {
     case UserRole.MANAGER:
     case UserRole.SUPERVISOR:
     case UserRole.STAFF:
-      return "/super-admin/dashboard";
+      return "/master/dashboard";
     case UserRole.SHOP_OWNER:
-      return "/shop-owner/dashboard";
+      return "/seller/dashboard";
     case UserRole.SHOP_MANAGER:
     case UserRole.SHOP_SUPERVISOR:
     case UserRole.EMPLOYEE:

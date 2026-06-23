@@ -7,7 +7,7 @@ import { SUPER_ADMIN_ROLES } from "@/lib/roles";
 
 export default function SuperAdminLayout({ children }: { children: ReactNode }) {
   return (
-    <RoleLayout nav={superAdminNav} allowedRoles={SUPER_ADMIN_ROLES} title="Super Admin">
+    <RoleLayout nav={superAdminNav} allowedRoles={SUPER_ADMIN_ROLES} title="Master Admin">
       {children}
     </RoleLayout>
   );

@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CustomerHeader } from "@/components/layout/CustomerHeader";
-import { CUSTOMER_ROLES, UserRole, getRoleHome } from "@/lib/roles";
+import { CUSTOMER_ROLES, UserRole } from "@/lib/roles";
 import { useAuthStore } from "@/store/auth.store";
 import { APP_NAME } from "@/lib/constants";
 
@@ -19,7 +19,7 @@ export default function CustomerLayout({ children }: { children: ReactNode }) {
       return;
     }
     if (user && !CUSTOMER_ROLES.includes(user.role as typeof UserRole.CUSTOMER)) {
-      router.replace(getRoleHome(user.role));
+      router.replace("/unauthorized");
       return;
     }
     setReady(true);

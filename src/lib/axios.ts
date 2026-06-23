@@ -24,11 +24,19 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (typeof window !== "undefined" && error.response?.status === 401) {
-      const path = window.location.pathname;
-      const isOnPortal =
-        path === "/login" || path === "/master" || path === "/seller" || path.startsWith("/auth");
+      const path = window.location.pathname.replace(/\/+$/, "") || "/";
+      // Public pages (the storefront home, login portals, the 403 page) must not
+      // be force-redirected on a 401 — anonymous visitors hit authed endpoints
+      // best-effort and should just see fallback content, not get bounced.
+      const isPublic =
+        path === "/" ||
+        path === "/unauthorized" ||
+        path === "/login" ||
+        path === "/master" ||
+        path === "/seller" ||
+        path.startsWith("/auth");
 
-      if (!isOnPortal) {
+      if (!isPublic) {
         let portal = "/login";
         try {
           const raw = localStorage.getItem(STORAGE_KEYS.user);

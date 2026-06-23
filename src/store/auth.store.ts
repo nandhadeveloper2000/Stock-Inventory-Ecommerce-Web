@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { STORAGE_KEYS } from "@/lib/constants";
+import { setAuthCookies, clearAuthCookies } from "@/lib/auth";
 import type { AuthUser } from "@/types/auth.types";
 
 interface AuthState {
@@ -27,6 +28,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
       localStorage.setItem(STORAGE_KEYS.accessToken, accessToken);
       if (refreshToken) localStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
+      setAuthCookies(accessToken, String(user.role));
     }
     set({ user, accessToken, refreshToken: refreshToken ?? null, isAuthenticated: true });
   },
@@ -47,6 +49,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.removeItem(STORAGE_KEYS.accessToken);
       localStorage.removeItem(STORAGE_KEYS.refreshToken);
       localStorage.removeItem(STORAGE_KEYS.shopId);
+      clearAuthCookies();
     }
     set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
   },
@@ -59,6 +62,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (rawUser && accessToken) {
       try {
         const user = JSON.parse(rawUser) as AuthUser;
+        setAuthCookies(accessToken, String(user.role));
         set({ user, accessToken, refreshToken, isAuthenticated: true, hasHydrated: true });
         return;
       } catch {

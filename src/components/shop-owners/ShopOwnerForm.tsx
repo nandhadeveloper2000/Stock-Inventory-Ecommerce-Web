@@ -586,7 +586,7 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
           ? `Shop owner ${owner.name} updated`
           : `Shop owner ${owner.name} created with ${locations.length} location(s)`
       );
-      router.push("/super-admin/shop-owners");
+      router.push("/master/shop-owners");
     } catch (e) {
       toast.error(extractErrorMessage(e, "Failed to save shop owner"));
     } finally {
@@ -613,7 +613,7 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
           </p>
         </div>
         <Button variant="outline" asChild>
-          <Link href="/super-admin/shop-owners">
+          <Link href="/master/shop-owners">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Shop Owners
           </Link>
         </Button>
@@ -1194,7 +1194,7 @@ export function ShopOwnerForm({ mode, ownerId, initialOwner, initialShops }: Sho
       </Card>
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => router.push("/super-admin/shop-owners")}>
+        <Button variant="outline" onClick={() => router.push("/master/shop-owners")}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Cancel
         </Button>
         <Button onClick={onSubmit} disabled={submitting}>
@@ -1268,20 +1268,20 @@ function LiveLocationMap({ lat, lon }: { lat: string; lon: string }) {
     );
   }
 
-  const d = 0.008;
-  const bbox = `${lo - d},${la - d},${lo + d},${la + d}`;
-  const embedSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${la},${lo}`;
-  const fullMap = `https://www.openstreetmap.org/?mlat=${la}&mlon=${lo}#map=17/${la}/${lo}`;
+  // Google Maps embed via the no-API-key `output=embed` endpoint.
+  const embedSrc = `https://maps.google.com/maps?q=${la},${lo}&z=16&hl=en&output=embed`;
+  const fullMap = `https://www.google.com/maps/search/?api=1&query=${la},${lo}`;
 
   return (
     <div className="mt-3 space-y-1">
       <iframe
         // key forces a fresh load when coords change so the marker re-centers
         key={`${la},${lo}`}
-        title="Shop location preview"
+        title="Shop location on Google Maps"
         src={embedSrc}
         className="h-48 w-full rounded-md border"
         loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
       />
       <div className="flex items-center justify-between text-[11px] text-muted-foreground">
         <span>

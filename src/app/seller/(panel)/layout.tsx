@@ -7,7 +7,7 @@ import { SHOP_OWNER_ROLES } from "@/lib/roles";
 
 export default function ShopOwnerLayout({ children }: { children: ReactNode }) {
   return (
-    <RoleLayout nav={shopOwnerNav} allowedRoles={SHOP_OWNER_ROLES} title="Shop Owner">
+    <RoleLayout nav={shopOwnerNav} allowedRoles={SHOP_OWNER_ROLES} title="Seller">
       {children}
     </RoleLayout>
   );
