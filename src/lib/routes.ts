@@ -16,6 +16,8 @@ export const routes = {
     dashboard: "/super-admin/dashboard",
     users: "/super-admin/users",
     shopOwners: "/super-admin/shop-owners",
+    shopOwnerDetails: (id: string | number) => `/super-admin/shop-owners/${id}`,
+    shopOwnerEdit: (id: string | number) => `/super-admin/shop-owners/${id}/edit`,
     shops: "/super-admin/shops",
     categories: "/super-admin/categories",
     brands: "/super-admin/brands",
