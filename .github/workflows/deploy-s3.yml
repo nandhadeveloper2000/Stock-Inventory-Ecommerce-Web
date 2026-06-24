@@ -41,24 +41,40 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
         run: |
-          echo "Checking API base URL..."
-
           if [ -z "$NEXT_PUBLIC_API_BASE_URL" ]; then
             echo "ERROR: NEXT_PUBLIC_API_BASE_URL GitHub variable is empty."
             exit 1
           fi
 
-          echo "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL"
+          echo "API URL configured successfully."
 
       - name: Build static Next.js website
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
         run: npm run build
 
-      - name: Verify static build output
+      - name: Verify required static pages
         run: |
-          test -d out
-          test -f out/index.html
+          echo "Checking exported static files..."
+
+          REQUIRED_FILES=(
+            "out/index.html"
+            "out/login/index.html"
+            "out/seller/index.html"
+            "out/master/index.html"
+          )
+
+          for FILE in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$FILE" ]; then
+              echo "ERROR: Missing static page: $FILE"
+              echo ""
+              echo "Generated HTML files found:"
+              find out -type f -name "index.html" | sort
+              exit 1
+            fi
+
+            echo "OK: $FILE"
+          done
 
       - name: Configure AWS credentials through OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -70,6 +86,20 @@ jobs:
         run: |
           aws s3 sync ./out s3://${{ vars.S3_BUCKET }} --delete
 
+      - name: Invalidate CloudFront cache
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          if [ -z "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
+            echo "ERROR: CLOUDFRONT_DISTRIBUTION_ID GitHub variable is empty."
+            exit 1
+          fi
+
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/*"
+
       - name: Deployment completed
         run: |
-          echo "Website deployed successfully to S3 bucket: ${{ vars.S3_BUCKET }}"
+          echo "Website deployed successfully to S3."
+          echo "CloudFront invalidation requested."
