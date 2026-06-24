@@ -37,28 +37,91 @@ jobs:
             npm install
           fi
 
-      - name: Verify production API URL
+      - name: Verify required GitHub variables
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
-          echo "Checking API base URL..."
+          echo "Checking required deployment variables..."
 
           if [ -z "$NEXT_PUBLIC_API_BASE_URL" ]; then
-            echo "ERROR: NEXT_PUBLIC_API_BASE_URL GitHub variable is empty."
+            echo "ERROR: NEXT_PUBLIC_API_BASE_URL is empty."
             exit 1
           fi
 
-          echo "NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL"
+          if [ -z "$AWS_REGION" ]; then
+            echo "ERROR: AWS_REGION is empty."
+            exit 1
+          fi
+
+          if [ -z "$S3_BUCKET" ]; then
+            echo "ERROR: S3_BUCKET is empty."
+            exit 1
+          fi
+
+          if [ -z "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
+            echo "ERROR: CLOUDFRONT_DISTRIBUTION_ID is empty."
+            exit 1
+          fi
+
+          echo "All required GitHub variables are configured."
+          echo "AWS_REGION=$AWS_REGION"
+          echo "S3_BUCKET=$S3_BUCKET"
+          echo "CLOUDFRONT_DISTRIBUTION_ID=$CLOUDFRONT_DISTRIBUTION_ID"
 
       - name: Build static Next.js website
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
-        run: npm run build
-
-      - name: Verify static build output
         run: |
-          test -d out
-          test -f out/index.html
+          npm run build
+
+      - name: Verify exported static pages
+        run: |
+          echo "Checking exported Next.js files..."
+
+          REQUIRED_FILES=(
+            "out/index.html"
+            "out/login/index.html"
+            "out/seller/index.html"
+            "out/master/index.html"
+          )
+
+          for FILE in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$FILE" ]; then
+              echo "ERROR: Missing static page: $FILE"
+              echo ""
+              echo "Available exported index.html files:"
+              find out -type f -name "index.html" | sort || true
+              echo ""
+              echo "Available master-related files:"
+              find out -type f -path "*master*" | sort || true
+              echo ""
+              echo "Available seller-related files:"
+              find out -type f -path "*seller*" | sort || true
+              exit 1
+            fi
+
+            echo "OK: $FILE"
+          done
+
+      - name: Show exported route folders
+        run: |
+          echo "Root exported files:"
+          ls -la out
+
+          echo ""
+          echo "Master route output:"
+          ls -la out/master
+
+          echo ""
+          echo "Seller route output:"
+          ls -la out/seller
+
+          echo ""
+          echo "Login route output:"
+          ls -la out/login
 
       - name: Configure AWS credentials through OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -66,10 +129,66 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Upload website to Amazon S3
+      - name: Upload website files to Amazon S3
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
         run: |
-          aws s3 sync ./out s3://${{ vars.S3_BUCKET }} --delete
+          aws s3 sync ./out/ "s3://$S3_BUCKET" --delete
+
+      - name: Verify route files uploaded to S3
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        run: |
+          echo "Checking deployed files in S3..."
+
+          REQUIRED_KEYS=(
+            "index.html"
+            "login/index.html"
+            "seller/index.html"
+            "master/index.html"
+          )
+
+          for KEY in "${REQUIRED_KEYS[@]}"; do
+            if ! aws s3api head-object \
+              --bucket "$S3_BUCKET" \
+              --key "$KEY" > /dev/null 2>&1; then
+
+              echo "ERROR: File was not found in S3: $KEY"
+              echo ""
+
+              echo "Files currently inside master folder:"
+              aws s3 ls "s3://$S3_BUCKET/master/" --recursive || true
+
+              echo ""
+              echo "Files currently inside seller folder:"
+              aws s3 ls "s3://$S3_BUCKET/seller/" --recursive || true
+
+              exit 1
+            fi
+
+            echo "OK in S3: $KEY"
+          done
+
+      - name: Invalidate CloudFront cache
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          INVALIDATION_ID=$(
+            aws cloudfront create-invalidation \
+              --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+              --paths "/*" \
+              --query "Invalidation.Id" \
+              --output text
+          )
+
+          echo "CloudFront invalidation created successfully."
+          echo "Invalidation ID: $INVALIDATION_ID"
 
       - name: Deployment completed
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
-          echo "Website deployed successfully to S3 bucket: ${{ vars.S3_BUCKET }}"
+          echo "Website deployed successfully."
+          echo "S3 bucket: $S3_BUCKET"
+          echo "CloudFront distribution: $CLOUDFRONT_DISTRIBUTION_ID"
