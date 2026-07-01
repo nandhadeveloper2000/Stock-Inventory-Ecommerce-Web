@@ -25,6 +25,8 @@ export interface Brand {
 
 export interface ProductType {
   id: ID;
+  subCategoryId?: ID;
+  subCategoryName?: string;
   name: string;
   isActive: boolean;
 }
@@ -34,8 +36,7 @@ export interface ProductModel {
   brandId: ID;
   brandName?: string;
   name: string;
-  year?: number;
-  description?: string;
+  modelNumber?: string;
   isActive: boolean;
 }
 
@@ -46,9 +47,32 @@ export interface ProductAttribute {
   isActive: boolean;
 }
 
+export interface CompatibleModelRef {
+  id: ID;
+  name?: string;
+}
+
+export interface CompatibleEntry {
+  brandId: ID;
+  brandName?: string;
+  /** Present on responses (resolved names). */
+  models?: CompatibleModelRef[];
+  /** Sent on requests. */
+  modelIds?: ID[];
+  notes?: string;
+  active?: boolean;
+  sortOrder?: number;
+}
+
 export interface ProductCompatibility {
   id: ID;
-  productId: ID;
-  brandId: ID;
-  modelId: ID;
+  productTypeId: ID;
+  productTypeName?: string;
+  subCategoryId?: ID;
+  subCategoryName?: string;
+  productBrandId: ID;
+  productBrandName?: string;
+  compatible: CompatibleEntry[];
+  isActive: boolean;
+  active?: boolean;
 }

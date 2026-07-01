@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, Package2 } from "lucide-react";
+import { Package2 } from "lucide-react";
 import type { NavItem } from "./nav-items";
 import { useSidebarStore } from "@/store/sidebar.store";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,6 @@ interface Props {
 export function AppSidebar({ items }: Props) {
   const pathname = usePathname();
   const collapsed = useSidebarStore((s) => s.collapsed);
-  const toggle = useSidebarStore((s) => s.toggle);
 
   return (
     <aside
@@ -62,15 +61,6 @@ export function AppSidebar({ items }: Props) {
           })}
         </ul>
       </nav>
-
-      <button
-        type="button"
-        onClick={toggle}
-        className="flex h-10 items-center justify-center border-t text-muted-foreground hover:bg-accent"
-        aria-label="Toggle sidebar"
-      >
-        {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-      </button>
     </aside>
   );
 }

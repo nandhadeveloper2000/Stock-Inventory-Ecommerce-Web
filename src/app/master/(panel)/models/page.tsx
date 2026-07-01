@@ -10,8 +10,7 @@ import type { ProductModel } from "@/types/catalog.types";
 const schema = z.object({
   brandId: z.coerce.number().min(1),
   name: z.string().min(2),
-  year: z.coerce.number().int().optional(),
-  description: z.string().optional(),
+  modelNumber: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 type Values = z.infer<typeof schema>;
@@ -27,11 +26,11 @@ export default function ModelsPage() {
       title="Models"
       description="Models associated to brands."
       rows={data}
-      searchKeys={["name", "brandName"]}
+      searchKeys={["name", "brandName", "modelNumber"]}
       columns={[
         { key: "name", header: "Model", render: (r) => <span className="font-medium">{r.name}</span> },
         { key: "brandName", header: "Brand" },
-        { key: "year", header: "Year" },
+        { key: "modelNumber", header: "Model Number" },
       ]}
       formTitle="Model"
       formContent={(record, close) => (
@@ -40,15 +39,13 @@ export default function ModelsPage() {
           defaultValues={{
             brandId: (record?.brandId as number) ?? (brands[0]?.id as number),
             name: record?.name ?? "",
-            year: record?.year ?? new Date().getFullYear(),
-            description: record?.description ?? "",
+            modelNumber: record?.modelNumber ?? "",
             isActive: record?.isActive ?? true,
           }}
           fields={[
             { name: "brandId", label: "Brand", type: "select", options: brands.map((b) => ({ label: b.name, value: b.id as number })) },
             { name: "name", label: "Name" },
-            { name: "year", label: "Year", type: "number" },
-            { name: "description", label: "Description", type: "textarea", colSpan: 2 },
+            { name: "modelNumber", label: "Model Number" },
             { name: "isActive", label: "Active", type: "switch" },
           ]}
           onSubmit={async (values) => {
@@ -63,8 +60,7 @@ export default function ModelsPage() {
         <>
           <InfoRow label="Name" value={r.name} />
           <InfoRow label="Brand" value={r.brandName} />
-          <InfoRow label="Year" value={r.year} />
-          <InfoRow label="Description" value={r.description} />
+          <InfoRow label="Model Number" value={r.modelNumber} />
         </>
       )}
       onDelete={async (r) => {
