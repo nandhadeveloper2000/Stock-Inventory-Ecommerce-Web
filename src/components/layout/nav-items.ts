@@ -19,6 +19,7 @@ import {
   Repeat,
   ClipboardList,
   Boxes,
+  Link2,
   QrCode,
   Wallet,
   FileText,
@@ -36,24 +37,33 @@ import { routes } from "@/lib/routes";
 
 export interface NavItem {
   label: string;
-  href: string;
+  /** Optional for group parents (which only expand/collapse their children). */
+  href?: string;
   icon: LucideIcon;
+  /** When present, this item is a collapsible group of sub-items. */
+  children?: NavItem[];
 }
 
 export const superAdminNav: NavItem[] = [
   { label: "Dashboard", href: routes.superAdmin.dashboard, icon: LayoutDashboard },
   { label: "Users", href: routes.superAdmin.users, icon: Users },
   { label: "Shop Owners", href: routes.superAdmin.shopOwners, icon: UserCog },
-  { label: "Categories", href: routes.superAdmin.categories, icon: Tags },
-  { label: "Brands", href: routes.superAdmin.brands, icon: Briefcase },
-  { label: "Sub Categories", href: routes.superAdmin.subCategories, icon: Layers },
-  { label: "Product Types", href: routes.superAdmin.productTypes, icon: Boxes },
-  { label: "Models", href: routes.superAdmin.models, icon: Cpu },
-  { label: "Product Attributes", href: routes.superAdmin.productAttributes, icon: ScrollText },
-  { label: "Product Compatibility", href: routes.superAdmin.productCompatibilities, icon: PackageSearch },
-  { label: "Products", href: routes.superAdmin.products, icon: Package },
-  { label: "Product Approvals", href: routes.superAdmin.productApprovals, icon: CheckSquare },
-  { label: "Reports", href: routes.superAdmin.reports, icon: BarChart3 },
+  {
+    label: "Product",
+    icon: Package,
+    children: [
+      { label: "Categories", href: routes.superAdmin.categories, icon: Tags },
+      { label: "Brands", href: routes.superAdmin.brands, icon: Briefcase },
+      { label: "Brand Mapping", href: routes.superAdmin.categoryBrands, icon: Link2 },
+      { label: "Sub Categories", href: routes.superAdmin.subCategories, icon: Layers },
+      { label: "Product Types", href: routes.superAdmin.productTypes, icon: Boxes },
+      { label: "Models", href: routes.superAdmin.models, icon: Cpu },
+      { label: "Product Attributes", href: routes.superAdmin.productAttributes, icon: ScrollText },
+      { label: "Product Compatibility", href: routes.superAdmin.productCompatibilities, icon: PackageSearch },
+      { label: "Products", href: routes.superAdmin.products, icon: Package },
+      { label: "Product Approvals", href: routes.superAdmin.productApprovals, icon: CheckSquare },
+    ],
+  },
   { label: "Notifications", href: routes.superAdmin.notifications, icon: Bell },
   { label: "Settings", href: routes.superAdmin.settings, icon: Settings },
 ];

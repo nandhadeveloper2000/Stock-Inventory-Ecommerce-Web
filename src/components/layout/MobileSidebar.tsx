@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Package2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronDown, Package2 } from "lucide-react";
 import type { NavItem } from "./nav-items";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSidebarStore } from "@/store/sidebar.store";
@@ -13,10 +14,16 @@ interface Props {
   items: NavItem[];
 }
 
+function isActive(pathname: string, href?: string) {
+  if (!href) return false;
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
 export function MobileSidebar({ items }: Props) {
   const pathname = usePathname();
   const mobileOpen = useSidebarStore((s) => s.mobileOpen);
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen);
+  const close = () => setMobileOpen(false);
 
   return (
     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -31,28 +38,90 @@ export function MobileSidebar({ items }: Props) {
         </SheetHeader>
         <nav className="p-2">
           <ul className="space-y-0.5">
-            {items.map((item) => {
-              const Icon = item.icon;
-              const active = pathname === item.href || pathname.startsWith(item.href + "/");
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm",
-                      active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
+            {items.map((item) =>
+              item.children?.length ? (
+                <MobileGroup key={item.label} item={item} pathname={pathname} onNavigate={close} />
+              ) : (
+                <MobileLeaf key={item.href ?? item.label} item={item} pathname={pathname} onNavigate={close} />
+              )
+            )}
           </ul>
         </nav>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function MobileLeaf({
+  item,
+  pathname,
+  onNavigate,
+  nested,
+}: {
+  item: NavItem;
+  pathname: string;
+  onNavigate: () => void;
+  nested?: boolean;
+}) {
+  const Icon = item.icon;
+  const active = isActive(pathname, item.href);
+  return (
+    <li>
+      <Link
+        href={item.href ?? "#"}
+        onClick={onNavigate}
+        className={cn(
+          "flex items-center gap-3 rounded-md px-3 py-2 text-sm",
+          active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
+          nested && "pl-9"
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        {item.label}
+      </Link>
+    </li>
+  );
+}
+
+function MobileGroup({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: NavItem;
+  pathname: string;
+  onNavigate: () => void;
+}) {
+  const children = item.children ?? [];
+  const childActive = children.some((c) => isActive(pathname, c.href));
+  const [open, setOpen] = useState(childActive);
+
+  useEffect(() => {
+    if (childActive) setOpen(true);
+  }, [childActive]);
+
+  const Icon = item.icon;
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm",
+          childActive ? "text-foreground" : "text-muted-foreground hover:bg-accent"
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        <span className="flex-1 text-left">{item.label}</span>
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <ul className="mt-0.5 space-y-0.5">
+          {children.map((c) => (
+            <MobileLeaf key={c.href ?? c.label} item={c} pathname={pathname} onNavigate={onNavigate} nested />
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }

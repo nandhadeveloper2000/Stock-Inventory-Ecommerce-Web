@@ -21,6 +21,7 @@ export const routes = {
     shops: "/master/shops",
     categories: "/master/categories",
     brands: "/master/brands",
+    categoryBrands: "/master/category-brands",
     subCategories: "/master/sub-categories",
     productTypes: "/master/product-types",
     models: "/master/models",

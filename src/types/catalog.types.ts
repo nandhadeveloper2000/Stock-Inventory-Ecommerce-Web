@@ -33,11 +33,23 @@ export interface ProductType {
 
 export interface ProductModel {
   id: ID;
+  categoryId?: ID;
   brandId: ID;
   brandName?: string;
   name: string;
   modelNumber?: string;
   isActive: boolean;
+}
+
+export interface CategoryBrand {
+  id: ID;
+  categoryId: ID;
+  categoryName?: string;
+  brandId: ID;
+  brandName?: string;
+  brandLogoUrl?: string;
+  active?: boolean;
+  isActive?: boolean;
 }
 
 export interface ProductAttribute {

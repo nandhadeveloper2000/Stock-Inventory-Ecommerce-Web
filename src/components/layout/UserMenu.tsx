@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { LogOut, Settings as SettingsIcon, UserCircle } from "lucide-react";
+import { LogOut, Settings as SettingsIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/auth.store";
 import { initials } from "@/lib/utils";
 import { getRoleLabel } from "@/lib/roles";
-import { getLoginPortalFor } from "@/lib/portals";
+import { getLoginPortalFor, getSettingsRoute } from "@/lib/portals";
 
 export function UserMenu() {
   const router = useRouter();
@@ -44,10 +44,7 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="gap-2">
-          <UserCircle className="h-4 w-4" /> Profile
-        </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2">
+        <DropdownMenuItem className="gap-2" onClick={() => router.push(getSettingsRoute(user?.role))}>
           <SettingsIcon className="h-4 w-4" /> Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
